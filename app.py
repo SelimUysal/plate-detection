@@ -137,32 +137,38 @@ def detect_plates(image: Image.Image) -> list[dict]:
     return detections
 
 
-# Example images are compact and arranged in one row.
-st.subheader("Choose an example")
+# Compact example gallery: each image has its own independent card.
+st.subheader("Example images")
 sample_columns = st.columns(3, gap="medium")
 for column, sample in zip(sample_columns, SAMPLES):
     sample_path = SAMPLE_DIR / sample["filename"]
     with column:
-        if sample_path.exists():
-            st.image(str(sample_path), width=180)
-            if st.button(sample["filename"], key=f"sample_{sample['filename']}", use_container_width=True):
-                st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
-                st.session_state["selected_sample_name"] = sample["filename"]
-                # A chosen example replaces any previously uploaded image.
-                st.session_state["user_image_upload"] = None
-                st.session_state.pop("plate_detections", None)
-                st.session_state.pop("plate_source_image", None)
-                st.session_state.pop("plate_source_name", None)
-        else:
-            st.error(f"Missing: {sample['filename']}")
+        with st.container(border=True):
+            if sample_path.exists():
+                st.image(str(sample_path), width=150)
+                if st.button(
+                    Path(sample["filename"]).stem,
+                    key=f"sample_{sample['filename']}",
+                    use_container_width=True,
+                ):
+                    st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
+                    st.session_state["selected_sample_name"] = sample["filename"]
+                    # A chosen example replaces any previously uploaded image.
+                    st.session_state["user_image_upload"] = None
+                    st.session_state.pop("plate_detections", None)
+                    st.session_state.pop("plate_source_image", None)
+                    st.session_state.pop("plate_source_name", None)
+            else:
+                st.error(f"Missing: {sample['filename']}")
 
 st.divider()
 st.subheader("Upload your own image")
-uploaded_file = st.file_uploader(
-    "Choose an image",
-    type=["jpg", "jpeg", "png", "webp"],
-    key="user_image_upload",
-)
+with st.container(border=True):
+    uploaded_file = st.file_uploader(
+        "Upload an image from your device",
+        type=["jpg", "jpeg", "png", "webp"],
+        key="user_image_upload",
+    )
 
 selected_bytes = None
 selected_name = None
@@ -181,7 +187,7 @@ if selected_bytes is not None:
             selected_bytes = None
         else:
             st.subheader("Selected image")
-            st.image(selected_preview, use_container_width=True)
+            st.image(selected_preview, width=500)
     except Exception:
         st.error("The selected image could not be opened.")
         selected_bytes = None
