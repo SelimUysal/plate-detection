@@ -141,7 +141,7 @@ def detect_plates(image: Image.Image) -> list[dict]:
 def select_sample(sample_path: Path, filename: str) -> None:
     st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
     st.session_state["selected_sample_name"] = filename
-    st.session_state["user_image_upload"] = None
+    st.session_state["active_image_source"] = "sample"
     st.session_state.pop("plate_detections", None)
     st.session_state.pop("plate_source_image", None)
     st.session_state.pop("plate_source_name", None)
@@ -234,16 +234,24 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+def mark_uploaded_image() -> None:
+    st.session_state["active_image_source"] = "upload"
+
+
 uploaded_file = st.file_uploader(
     "Browse image files",
     type=["jpg", "jpeg", "png", "webp"],
     key="user_image_upload",
     label_visibility="collapsed",
+    on_change=mark_uploaded_image,
 )
 
 selected_bytes = None
 selected_name = None
-if uploaded_file is not None:
+if st.session_state.get("active_image_source") == "sample":
+    selected_bytes = st.session_state.get("selected_sample_bytes")
+    selected_name = st.session_state.get("selected_sample_name", "example-image")
+elif uploaded_file is not None:
     selected_bytes = uploaded_file.getvalue()
     selected_name = uploaded_file.name
 elif "selected_sample_bytes" in st.session_state:
