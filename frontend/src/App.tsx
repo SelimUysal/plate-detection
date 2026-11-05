@@ -128,17 +128,25 @@ function App() {
         <div className="sample-grid">
           {samples.map((sample) => (
             <article className="sample-card" key={sample.filename}>
-              <div className="sample-image-wrap">
-                <img
-                  src={`${API_BASE_URL}/api/samples/${encodeURIComponent(sample.filename)}`}
-                  alt={sample.filename}
-                  loading="lazy"
-                  onError={(event) => {
-                    const image = event.currentTarget;
-                    image.style.visibility = "hidden";
-                  }}
-                />
-              </div>
+              <button
+                className="sample-image-button"
+                type="button"
+                onClick={() => void chooseSample(sample.filename)}
+                disabled={Boolean(loadingSample) || apiOnline === false}
+                aria-label={`Select ${sample.filename}`}
+              >
+                <span className="sample-image-wrap">
+                  <img
+                    src={`${API_BASE_URL}/api/samples/${encodeURIComponent(sample.filename)}`}
+                    alt={sample.filename}
+                    loading="lazy"
+                    onError={(event) => {
+                      const image = event.currentTarget;
+                      image.style.visibility = "hidden";
+                    }}
+                  />
+                </span>
+              </button>
               <p className="sample-description">
                 {sampleDescriptions[sample.filename] || "Example image"}
               </p>
