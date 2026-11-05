@@ -180,16 +180,6 @@ def select_sample(sample_path: Path, filename: str) -> None:
     st.session_state.pop("plate_source_name", None)
 
 
-# Clicking an example image itself selects it; the Try button below does the same.
-clicked_sample = st.query_params.get("sample")
-if clicked_sample:
-    matching_sample = next((item for item in SAMPLES if item["filename"] == clicked_sample), None)
-    if matching_sample:
-        clicked_path = SAMPLE_DIR / matching_sample["filename"]
-        if clicked_path.exists():
-            select_sample(clicked_path, matching_sample["filename"])
-    del st.query_params["sample"]
-
 st.subheader("Example images")
 sample_columns = st.columns(3, gap="medium")
 sample_descriptions = [
@@ -220,13 +210,8 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
                 thumbnail_buffer = BytesIO()
                 thumbnail.save(thumbnail_buffer, format="JPEG", quality=88)
                 encoded_image = base64.b64encode(thumbnail_buffer.getvalue()).decode("ascii")
-                st.markdown(
-                    f"<a href='?sample={sample['filename']}' style='display:block;'>"
-                    f"<img src='data:image/jpeg;base64,{encoded_image}' "
-                    f"style='display:block; width:100%; height:150px; object-fit:contain; background:#f5f5f5; "
-                    f"border-radius:8px; cursor:pointer;' alt='{sample['filename']}'></a>",
-                    unsafe_allow_html=True,
-                )
+                # Preview images are deliberately non-clickable. Use the Try button to select one.
+                st.image(thumbnail, use_container_width=True)
                 st.markdown(
                     f"<div class='sample-filename'>"
                     f"{Path(sample['filename']).stem}</div>",
