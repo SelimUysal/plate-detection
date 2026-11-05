@@ -152,13 +152,32 @@ def detect_plates(image: Image.Image) -> list[dict]:
     return detections
 
 
-left, right = st.columns([1.55, 1], gap="large")
+left, right = st.columns([1, 1.55], gap="large")
 
 process_now = False
 pending_bytes = None
 pending_name = "uploaded-image"
 
 with left:
+    st.subheader("Explore example images")
+    st.caption("Select an example to run it through the same detection and OCR pipeline.")
+    for sample in SAMPLES:
+        sample_path = SAMPLE_DIR / sample["filename"]
+        with st.container(border=True):
+            st.markdown(f"**{sample['title']}**")
+            if sample_path.exists():
+                st.image(str(sample_path), use_container_width=True)
+                st.caption(sample["description"])
+                if st.button("Try this example", key=f"sample_{sample['key']}", use_container_width=True):
+                    pending_bytes = sample_path.read_bytes()
+                    pending_name = sample["filename"]
+                    process_now = True
+            else:
+                st.info(f"Example image not added yet. Add: assets/sample_images/{sample['filename']}")
+                st.caption(sample["description"])
+
+
+with right:
     st.subheader("Try your own image")
     uploaded_file = st.file_uploader(
         "Choose a vehicle image",
@@ -179,24 +198,6 @@ with left:
         except Exception as exc:
             st.error("The uploaded file could not be opened.")
             st.exception(exc)
-
-with right:
-    st.subheader("Explore example images")
-    st.caption("Select an example to run it through the same detection and OCR pipeline.")
-    for sample in SAMPLES:
-        sample_path = SAMPLE_DIR / sample["filename"]
-        with st.container(border=True):
-            st.markdown(f"**{sample['title']}**")
-            if sample_path.exists():
-                st.image(str(sample_path), use_container_width=True)
-                st.caption(sample["description"])
-                if st.button("Try this example", key=f"sample_{sample['key']}", use_container_width=True):
-                    pending_bytes = sample_path.read_bytes()
-                    pending_name = sample["filename"]
-                    process_now = True
-            else:
-                st.info(f"Example image not added yet. Add: assets/sample_images/{sample['filename']}")
-                st.caption(sample["description"])
 
 if process_now and pending_bytes is not None:
     try:
