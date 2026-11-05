@@ -19,6 +19,14 @@ def test_sample_list_contains_expected_examples():
     assert returned == set(SAMPLE_FILENAMES)
 
 
+def test_all_example_images_can_be_retrieved():
+    for filename in SAMPLE_FILENAMES:
+        response = client.get(f"/api/samples/{filename}")
+        assert response.status_code == 200
+        assert response.headers["content-type"] in {"image/jpeg", "image/png"}
+        assert len(response.content) > 0
+
+
 def test_sample_endpoint_rejects_unknown_filename():
     response = client.get("/api/samples/not-a-real-file.jpg")
     assert response.status_code == 404
