@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 from app.config import (
     CORS_ORIGINS,
@@ -90,7 +90,7 @@ def detect_image(file: UploadFile = File(...)):
                     status_code=413,
                     detail="This image is too large. Please use an image with fewer than 20 million pixels.",
                 )
-            image = ImageOps.exif_transpose(source).convert("RGB")
+            image = source.convert("RGB")
     except HTTPException:
         raise
     except (OSError, UnidentifiedImageError, ValueError):
