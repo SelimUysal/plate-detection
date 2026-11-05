@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import base64
 import pathlib
 import re
 
@@ -10,7 +11,7 @@ import numpy as np
 import pytesseract
 import streamlit as st
 import torch
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parent
 WEIGHTS = ROOT / "best.pt"
@@ -137,27 +138,62 @@ def detect_plates(image: Image.Image) -> list[dict]:
     return detections
 
 
-# Compact example gallery: each image has its own independent card.
+def select_sample(sample_path: Path, filename: str) -> None:
+    st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
+    st.session_state["selected_sample_name"] = filename
+    st.session_state["user_image_upload"] = None
+    st.session_state.pop("plate_detections", None)
+    st.session_state.pop("plate_source_image", None)
+    st.session_state.pop("plate_source_name", None)
+
+
+# Clicking an example image itself selects it; the Try button below does the same.
+clicked_sample = st.query_params.get("sample")
+if clicked_sample:
+    matching_sample = next((item for item in SAMPLES if item["filename"] == clicked_sample), None)
+    if matching_sample:
+        clicked_path = SAMPLE_DIR / matching_sample["filename"]
+        if clicked_path.exists():
+            select_sample(clicked_path, matching_sample["filename"])
+    del st.query_params["sample"]
+
 st.subheader("Example images")
 sample_columns = st.columns(3, gap="medium")
-for column, sample in zip(sample_columns, SAMPLES):
+sample_descriptions = [
+    "Detection and OCR both correct",
+    "Detection correct, OCR incorrect",
+    "Detection and OCR failed",
+]
+
+for column, sample, description in zip(sample_columns, SAMPLES, sample_descriptions):
     sample_path = SAMPLE_DIR / sample["filename"]
     with column:
         with st.container(border=True):
+            st.markdown(
+                f"<div style='text-align:center; font-weight:600; min-height:48px; "
+                f"display:flex; align-items:center; justify-content:center;'>{description}</div>",
+                unsafe_allow_html=True,
+            )
             if sample_path.exists():
-                st.image(str(sample_path), width=150)
-                if st.button(
-                    Path(sample["filename"]).stem,
-                    key=f"sample_{sample['filename']}",
-                    use_container_width=True,
-                ):
-                    st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
-                    st.session_state["selected_sample_name"] = sample["filename"]
-                    # A chosen example replaces any previously uploaded image.
-                    st.session_state["user_image_upload"] = None
-                    st.session_state.pop("plate_detections", None)
-                    st.session_state.pop("plate_source_image", None)
-                    st.session_state.pop("plate_source_name", None)
+                with Image.open(sample_path) as source_image:
+                    thumbnail = ImageOps.fit(source_image.convert("RGB"), (420, 260))
+                thumbnail_buffer = BytesIO()
+                thumbnail.save(thumbnail_buffer, format="JPEG", quality=88)
+                encoded_image = base64.b64encode(thumbnail_buffer.getvalue()).decode("ascii")
+                st.markdown(
+                    f"<a href='?sample={sample['filename']}' style='display:block;'>"
+                    f"<img src='data:image/jpeg;base64,{encoded_image}' "
+                    f"style='display:block; width:100%; height:150px; object-fit:cover; "
+                    f"border-radius:8px; cursor:pointer;' alt='{sample['filename']}'></a>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<div style='text-align:center; font-size:0.78rem; margin-top:5px;'>"
+                    f"{Path(sample['filename']).stem}</div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button("Try", key=f"sample_{sample['filename']}", use_container_width=True):
+                    select_sample(sample_path, sample["filename"])
             else:
                 st.error(f"Missing: {sample['filename']}")
 
