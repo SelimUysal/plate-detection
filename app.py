@@ -213,8 +213,15 @@ st.markdown(
     .upload-help {
         color: var(--text-color);
         font-size: 0.92rem;
-        margin: -0.35rem 0 0.8rem 0;
+        max-width: 680px;
+        margin: -0.35rem auto 0.8rem auto;
         opacity: 0.78;
+    }
+    div[data-testid="stFileUploader"] {
+        width: 100%;
+        max-width: 680px;
+        margin-left: auto;
+        margin-right: auto;
     }
     [data-testid="stFileUploader"] section {
         border: 1.5px dashed var(--primary-color);
@@ -266,7 +273,9 @@ if selected_bytes is not None:
             selected_bytes = None
         else:
             st.subheader("Selected image")
-            st.image(selected_preview, width=500)
+            _, preview_column, _ = st.columns([1, 2, 1])
+            with preview_column:
+                st.image(selected_preview, use_container_width=True)
     except Exception:
         st.error("The selected image could not be opened.")
         selected_bytes = None
