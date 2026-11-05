@@ -342,8 +342,9 @@ if process_now and pending_bytes is not None:
         if image.width * image.height > MAX_IMAGE_PIXELS:
             st.error("This image is too large. Please upload an image with fewer than 20 million pixels.")
         else:
-            with st.spinner("Detecting plates and running OCR…"):
+            with st.status("Processing image… Please wait.", state="running", expanded=False) as process_status:
                 detections = detect_plates(image)
+                process_status.update(label="Image processing completed.", state="complete", expanded=False)
             st.session_state["plate_detections"] = detections
             st.session_state["plate_source_image"] = image
             st.session_state["plate_source_name"] = pending_name
