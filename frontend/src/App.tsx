@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import {
+  API_BASE_URL,
   checkApiHealth,
   detectImage,
   getSampleFile,
@@ -129,7 +130,7 @@ function App() {
             <article className="sample-card" key={sample.filename}>
               <div className="sample-image-wrap">
                 <img
-                  src={`http://localhost:8000/api/samples/${encodeURIComponent(sample.filename)}`}
+                  src={`${API_BASE_URL}/api/samples/${encodeURIComponent(sample.filename)}`}
                   alt={sample.filename}
                   loading="lazy"
                   onError={(event) => {
