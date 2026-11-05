@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import pathlib
 import re
 
 import cv2
@@ -30,6 +31,14 @@ st.caption("Upload a vehicle image to detect license plates and read the charact
 def load_model():
     if not WEIGHTS.exists():
         raise FileNotFoundError("The model file best.pt could not be found in the repository.")
+
+    # The checkpoint was created on Windows and may contain pathlib.WindowsPath
+    # objects. Streamlit Cloud runs Linux, where unpickling WindowsPath fails.
+    # Map that serialized class to PosixPath while YOLOv5 loads the checkpoint.
+    if not hasattr(pathlib, "WindowsPath"):
+        pathlib.WindowsPath = pathlib.PosixPath
+    else:
+        pathlib.WindowsPath = pathlib.PosixPath
 
     # CPU inference keeps the app compatible with the free hosting tier.
     model = torch.hub.load(
