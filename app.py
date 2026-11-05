@@ -14,30 +14,49 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
 WEIGHTS = ROOT / "best.pt"
+SAMPLE_DIR = ROOT / "assets" / "sample_images"
 CONFIDENCE_THRESHOLD = 0.25
 IMAGE_SIZE = 640
 MAX_IMAGE_PIXELS = 20_000_000
 
+SAMPLES = [
+    {
+        "key": "perfect",
+        "title": "1. Perfect recognition",
+        "description": "The plate is detected and the text is read correctly.",
+        "filename": "01_perfect_recognition.jpg",
+    },
+    {
+        "key": "partial",
+        "title": "2. Partial recognition",
+        "description": "The plate is detected, but the OCR text is incorrect.",
+        "filename": "02_detection_correct_ocr_incorrect.jpg",
+    },
+    {
+        "key": "failed",
+        "title": "3. Failed recognition",
+        "description": "The plate detection and text recognition are unsuccessful.",
+        "filename": "03_detection_and_ocr_failed.jpg",
+    },
+]
+
 st.set_page_config(
     page_title="License Plate Detection",
     page_icon="🚘",
-    layout="centered",
+    layout="wide",
 )
 
 st.title("🚘 License Plate Detection & Recognition")
-st.caption("Upload a vehicle image to detect license plates and read the characters with OCR.")
+st.caption("Upload your own vehicle image or try one of the three example scenarios.")
 
 @st.cache_resource(show_spinner="YOLOv5 model is loading…")
 def load_model():
     if not WEIGHTS.exists():
         raise FileNotFoundError("The model file best.pt could not be found in the repository.")
 
-    # The checkpoint was created on Windows and may contain pathlib.WindowsPath
-    # objects. Streamlit Cloud runs Linux, where unpickling WindowsPath fails.
-    # Map that serialized class to PosixPath while YOLOv5 loads the checkpoint.
+    # The checkpoint was created on Windows; Streamlit Cloud runs Linux.
     pathlib.WindowsPath = pathlib.PosixPath
 
-    # CPU inference keeps the app compatible with the free hosting tier.
     model = torch.hub.load(
         "ultralytics/yolov5:v7.0",
         "custom",
@@ -52,7 +71,6 @@ def load_model():
 
 
 def read_plate_text(crop: np.ndarray) -> tuple[str, float | None]:
-    """Read a plate crop with Tesseract; return text and mean OCR confidence."""
     if crop.size == 0:
         return "", None
 
@@ -89,10 +107,7 @@ def read_plate_text(crop: np.ndarray) -> tuple[str, float | None]:
     return text, mean_confidence
 
 
-def annotate_image(
-    image: Image.Image,
-    detections: list[dict],
-) -> Image.Image:
+def annotate_image(image: Image.Image, detections: list[dict]) -> Image.Image:
     output = image.copy().convert("RGB")
     draw = ImageDraw.Draw(output)
     try:
@@ -110,50 +125,90 @@ def annotate_image(
     return output
 
 
-uploaded_file = st.file_uploader(
-    "Choose a vehicle image",
-    type=["jpg", "jpeg", "png", "webp"],
-    help="Use a clear image where the vehicle and its plate are visible.",
-)
+def detect_plates(image: Image.Image) -> list[dict]:
+    model = load_model()
+    image_array = np.array(image.convert("RGB"))
+    results = model(image_array, size=IMAGE_SIZE)
+    raw = results.xyxy[0].detach().cpu().numpy()
 
-if uploaded_file is not None:
+    detections = []
+    for row in raw:
+        x1, y1, x2, y2, confidence, class_id = row.tolist()
+        x1i = max(0, min(image.width, int(x1)))
+        y1i = max(0, min(image.height, int(y1)))
+        x2i = max(0, min(image.width, int(x2)))
+        y2i = max(0, min(image.height, int(y2)))
+        if x2i <= x1i or y2i <= y1i:
+            continue
+
+        crop = image_array[y1i:y2i, x1i:x2i]
+        plate_text, ocr_confidence = read_plate_text(crop)
+        detections.append({
+            "box": (x1i, y1i, x2i, y2i),
+            "confidence": float(confidence),
+            "text": plate_text,
+            "ocr_confidence": ocr_confidence,
+        })
+    return detections
+
+
+left, right = st.columns([1.55, 1], gap="large")
+
+process_now = False
+pending_bytes = None
+pending_name = "uploaded-image"
+
+with left:
+    st.subheader("Try your own image")
+    uploaded_file = st.file_uploader(
+        "Choose a vehicle image",
+        type=["jpg", "jpeg", "png", "webp"],
+        help="Use a clear image where the vehicle and its plate are visible.",
+    )
+    if uploaded_file is not None:
+        try:
+            preview = Image.open(BytesIO(uploaded_file.getvalue())).convert("RGB")
+            if preview.width * preview.height > MAX_IMAGE_PIXELS:
+                st.error("This image is too large. Please upload an image with fewer than 20 million pixels.")
+            else:
+                st.image(preview, caption="Your uploaded image", use_container_width=True)
+                if st.button("Detect license plate", type="primary", use_container_width=True):
+                    pending_bytes = uploaded_file.getvalue()
+                    pending_name = uploaded_file.name
+                    process_now = True
+        except Exception as exc:
+            st.error("The uploaded file could not be opened.")
+            st.exception(exc)
+
+with right:
+    st.subheader("Explore example images")
+    st.caption("Select an example to run it through the same detection and OCR pipeline.")
+    for sample in SAMPLES:
+        sample_path = SAMPLE_DIR / sample["filename"]
+        with st.container(border=True):
+            st.markdown(f"**{sample['title']}**")
+            if sample_path.exists():
+                st.image(str(sample_path), use_container_width=True)
+                st.caption(sample["description"])
+                if st.button("Try this example", key=f"sample_{sample['key']}", use_container_width=True):
+                    pending_bytes = sample_path.read_bytes()
+                    pending_name = sample["filename"]
+                    process_now = True
+            else:
+                st.info(f"Example image not added yet. Add: assets/sample_images/{sample['filename']}")
+                st.caption(sample["description"])
+
+if process_now and pending_bytes is not None:
     try:
-        image = Image.open(uploaded_file).convert("RGB")
+        image = Image.open(BytesIO(pending_bytes)).convert("RGB")
         if image.width * image.height > MAX_IMAGE_PIXELS:
             st.error("This image is too large. Please upload an image with fewer than 20 million pixels.")
-            st.stop()
-        st.subheader("Uploaded image")
-        st.image(image, use_container_width=True)
-
-        if st.button("Detect license plate", type="primary", use_container_width=True):
+        else:
             with st.spinner("Detecting plates and running OCR…"):
-                model = load_model()
-                image_array = np.array(image)
-                results = model(image_array, size=IMAGE_SIZE)
-                raw = results.xyxy[0].detach().cpu().numpy()
-
-                detections = []
-                for row in raw:
-                    x1, y1, x2, y2, confidence, class_id = row.tolist()
-                    x1i = max(0, min(image.width, int(x1)))
-                    y1i = max(0, min(image.height, int(y1)))
-                    x2i = max(0, min(image.width, int(x2)))
-                    y2i = max(0, min(image.height, int(y2)))
-                    if x2i <= x1i or y2i <= y1i:
-                        continue
-
-                    crop = image_array[y1i:y2i, x1i:x2i]
-                    plate_text, ocr_confidence = read_plate_text(crop)
-                    detections.append({
-                        "box": (x1i, y1i, x2i, y2i),
-                        "confidence": float(confidence),
-                        "text": plate_text,
-                        "ocr_confidence": ocr_confidence,
-                    })
-
+                detections = detect_plates(image)
             st.session_state["plate_detections"] = detections
             st.session_state["plate_source_image"] = image
-
+            st.session_state["plate_source_name"] = pending_name
     except Exception as exc:
         st.error("The image could not be processed.")
         st.exception(exc)
@@ -164,6 +219,7 @@ if "plate_detections" in st.session_state:
 
     st.divider()
     st.subheader("Detection results")
+    st.caption(f"Image: {st.session_state.get('plate_source_name', 'Selected image')}")
     st.metric("Detected plates", len(detections))
 
     if detections:
