@@ -33,7 +33,7 @@ def load_model():
 
     # CPU inference keeps the app compatible with the free hosting tier.
     model = torch.hub.load(
-        "ultralytics/yolov5",
+        "ultralytics/yolov5:v7.0",
         "custom",
         path=str(WEIGHTS),
         force_reload=False,
