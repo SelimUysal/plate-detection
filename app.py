@@ -176,14 +176,22 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
             )
             if sample_path.exists():
                 with Image.open(sample_path) as source_image:
-                    thumbnail = ImageOps.fit(source_image.convert("RGB"), (420, 260))
+                    # Keep every preview frame identical, but show the full photo
+                    # smaller inside it so different source aspect ratios do not crop
+                    # the subject or make the examples look inconsistent.
+                    source_image = ImageOps.exif_transpose(source_image).convert("RGB")
+                    contained_image = ImageOps.contain(source_image, (360, 210))
+                    thumbnail = Image.new("RGB", (420, 260), (245, 245, 245))
+                    paste_x = (420 - contained_image.width) // 2
+                    paste_y = (260 - contained_image.height) // 2
+                    thumbnail.paste(contained_image, (paste_x, paste_y))
                 thumbnail_buffer = BytesIO()
                 thumbnail.save(thumbnail_buffer, format="JPEG", quality=88)
                 encoded_image = base64.b64encode(thumbnail_buffer.getvalue()).decode("ascii")
                 st.markdown(
                     f"<a href='?sample={sample['filename']}' style='display:block;'>"
                     f"<img src='data:image/jpeg;base64,{encoded_image}' "
-                    f"style='display:block; width:100%; height:150px; object-fit:cover; "
+                    f"style='display:block; width:100%; height:150px; object-fit:contain; background:#f5f5f5; "
                     f"border-radius:8px; cursor:pointer;' alt='{sample['filename']}'></a>",
                     unsafe_allow_html=True,
                 )
