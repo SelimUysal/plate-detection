@@ -207,12 +207,39 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
 
 st.divider()
 st.subheader("Upload your own image")
-with st.container(border=True):
-    uploaded_file = st.file_uploader(
-        "Upload an image from your device",
-        type=["jpg", "jpeg", "png", "webp"],
-        key="user_image_upload",
-    )
+st.markdown(
+    """
+    <style>
+    .upload-help {
+        color: var(--text-color);
+        font-size: 0.92rem;
+        margin: -0.35rem 0 0.8rem 0;
+        opacity: 0.78;
+    }
+    [data-testid="stFileUploader"] section {
+        border: 1.5px dashed var(--primary-color);
+        border-radius: 12px;
+        padding: 1.15rem 1rem;
+        background: rgba(128, 128, 128, 0.045);
+    }
+    [data-testid="stFileUploader"] section > div {
+        gap: 0.35rem;
+    }
+    [data-testid="stFileUploader"] button {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    </style>
+    <div class="upload-help">Choose an image from your device to get started.</div>
+    """,
+    unsafe_allow_html=True,
+)
+uploaded_file = st.file_uploader(
+    "Browse image files",
+    type=["jpg", "jpeg", "png", "webp"],
+    key="user_image_upload",
+    label_visibility="collapsed",
+)
 
 selected_bytes = None
 selected_name = None
@@ -299,9 +326,3 @@ if "plate_detections" in st.session_state:
     else:
         st.warning("No license plate was detected. Try a sharper image with a larger, clearly visible plate.")
 
-st.divider()
-st.caption(
-    "Note: OCR output may contain errors. Detection confidence and OCR confidence are different "
-    "measurements; always verify the recognized plate manually. Images are processed during the "
-    "session and are not intentionally stored by this app."
-)
