@@ -170,8 +170,8 @@ def detect_plates(image: Image.Image) -> list[dict]:
 
 
 def select_sample(sample_path: Path, filename: str) -> None:
-    # Clear the uploader so a previously uploaded file cannot override this sample.
-    st.session_state["user_image_upload"] = None
+    # Keep the uploader widget state untouched; Streamlit does not allow
+    # assigning to a widget key after that widget has been instantiated.
     st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
     st.session_state["selected_sample_name"] = filename
     st.session_state["active_image_source"] = "sample"
@@ -288,15 +288,16 @@ uploaded_file = st.file_uploader(
 selected_bytes = None
 selected_name = None
 
-# A newly uploaded file always takes priority over the previously selected sample.
-# This ensures that choosing another file replaces the previous preview and input.
-if uploaded_file is not None:
+# The uploader's on_change callback switches the active source to "upload".
+# Otherwise, a deliberately selected sample remains active even if the uploader
+# still holds an older file in its widget state.
+if st.session_state.get("active_image_source") == "sample":
+    selected_bytes = st.session_state.get("selected_sample_bytes")
+    selected_name = st.session_state.get("selected_sample_name", "example-image")
+elif uploaded_file is not None:
     selected_bytes = uploaded_file.getvalue()
     selected_name = uploaded_file.name
     st.session_state["active_image_source"] = "upload"
-elif st.session_state.get("active_image_source") == "sample":
-    selected_bytes = st.session_state.get("selected_sample_bytes")
-    selected_name = st.session_state.get("selected_sample_name", "example-image")
 elif "selected_sample_bytes" in st.session_state:
     selected_bytes = st.session_state["selected_sample_bytes"]
     selected_name = st.session_state.get("selected_sample_name", "example-image")
