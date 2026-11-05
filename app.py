@@ -20,24 +20,9 @@ IMAGE_SIZE = 640
 MAX_IMAGE_PIXELS = 20_000_000
 
 SAMPLES = [
-    {
-        "key": "perfect",
-        "title": "1. Perfect recognition",
-        "description": "The plate is detected and the text is read correctly.",
-        "filename": "01_perfect_recognition.jpg",
-    },
-    {
-        "key": "partial",
-        "title": "2. Partial recognition",
-        "description": "The plate is detected, but the OCR text is incorrect.",
-        "filename": "02_detection_correct_ocr_incorrect.jpg",
-    },
-    {
-        "key": "failed",
-        "title": "3. Failed recognition",
-        "description": "The plate detection and text recognition are unsuccessful.",
-        "filename": "03_detection_and_ocr_failed.jpg",
-    },
+    {"filename": "01_perfect_recognition.jpg"},
+    {"filename": "02_detection_correct_ocr_incorrect.jpg"},
+    {"filename": "03_detection_and_ocr_failed.jpg"},
 ]
 
 st.set_page_config(
@@ -46,8 +31,8 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🚘 License Plate Detection & Recognition")
-st.caption("Upload your own vehicle image or try one of the three example scenarios.")
+st.title("License Plate Detection")
+st.caption("Select an example or upload your own image.")
 
 @st.cache_resource(show_spinner="YOLOv5 model is loading…")
 def load_model():
@@ -152,52 +137,67 @@ def detect_plates(image: Image.Image) -> list[dict]:
     return detections
 
 
-left, right = st.columns([1, 1.55], gap="large")
+# Example images are compact and arranged in one row.
+st.subheader("Choose an example")
+sample_columns = st.columns(3, gap="medium")
+for column, sample in zip(sample_columns, SAMPLES):
+    sample_path = SAMPLE_DIR / sample["filename"]
+    with column:
+        if sample_path.exists():
+            st.image(str(sample_path), width=180)
+            if st.button(sample["filename"], key=f"sample_{sample['filename']}", use_container_width=True):
+                st.session_state["selected_sample_bytes"] = sample_path.read_bytes()
+                st.session_state["selected_sample_name"] = sample["filename"]
+                # A chosen example replaces any previously uploaded image.
+                st.session_state["user_image_upload"] = None
+                st.session_state.pop("plate_detections", None)
+                st.session_state.pop("plate_source_image", None)
+                st.session_state.pop("plate_source_name", None)
+        else:
+            st.error(f"Missing: {sample['filename']}")
+
+st.divider()
+st.subheader("Upload your own image")
+uploaded_file = st.file_uploader(
+    "Choose an image",
+    type=["jpg", "jpeg", "png", "webp"],
+    key="user_image_upload",
+)
+
+selected_bytes = None
+selected_name = None
+if uploaded_file is not None:
+    selected_bytes = uploaded_file.getvalue()
+    selected_name = uploaded_file.name
+elif "selected_sample_bytes" in st.session_state:
+    selected_bytes = st.session_state["selected_sample_bytes"]
+    selected_name = st.session_state.get("selected_sample_name", "example-image")
+
+if selected_bytes is not None:
+    try:
+        selected_preview = Image.open(BytesIO(selected_bytes)).convert("RGB")
+        if selected_preview.width * selected_preview.height > MAX_IMAGE_PIXELS:
+            st.error("This image is too large. Please choose an image with fewer than 20 million pixels.")
+            selected_bytes = None
+        else:
+            st.subheader("Selected image")
+            st.image(selected_preview, use_container_width=True)
+    except Exception:
+        st.error("The selected image could not be opened.")
+        selected_bytes = None
 
 process_now = False
 pending_bytes = None
-pending_name = "uploaded-image"
-
-with left:
-    st.subheader("Explore example images")
-    st.caption("Select an example to run it through the same detection and OCR pipeline.")
-    for sample in SAMPLES:
-        sample_path = SAMPLE_DIR / sample["filename"]
-        with st.container(border=True):
-            st.markdown(f"**{sample['title']}**")
-            if sample_path.exists():
-                st.image(str(sample_path), use_container_width=True)
-                st.caption(sample["description"])
-                if st.button("Try this example", key=f"sample_{sample['key']}", use_container_width=True):
-                    pending_bytes = sample_path.read_bytes()
-                    pending_name = sample["filename"]
-                    process_now = True
-            else:
-                st.info(f"Example image not added yet. Add: assets/sample_images/{sample['filename']}")
-                st.caption(sample["description"])
-
-
-with right:
-    st.subheader("Try your own image")
-    uploaded_file = st.file_uploader(
-        "Choose a vehicle image",
-        type=["jpg", "jpeg", "png", "webp"],
-        help="Use a clear image where the vehicle and its plate are visible.",
-    )
-    if uploaded_file is not None:
-        try:
-            preview = Image.open(BytesIO(uploaded_file.getvalue())).convert("RGB")
-            if preview.width * preview.height > MAX_IMAGE_PIXELS:
-                st.error("This image is too large. Please upload an image with fewer than 20 million pixels.")
-            else:
-                st.image(preview, caption="Your uploaded image", use_container_width=True)
-                if st.button("Detect license plate", type="primary", use_container_width=True):
-                    pending_bytes = uploaded_file.getvalue()
-                    pending_name = uploaded_file.name
-                    process_now = True
-        except Exception as exc:
-            st.error("The uploaded file could not be opened.")
-            st.exception(exc)
+pending_name = "selected-image"
+if st.button(
+    "Detect",
+    type="primary",
+    use_container_width=True,
+    disabled=selected_bytes is None,
+):
+    pending_bytes = selected_bytes
+    pending_name = selected_name or "selected-image"
+    process_now = True
 
 if process_now and pending_bytes is not None:
     try:
