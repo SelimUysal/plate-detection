@@ -32,6 +32,37 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+    <style>
+    .result-details {
+        text-align: center;
+        font-size: 1.08rem;
+        line-height: 1.65;
+        margin: 0.35rem auto 1rem auto;
+    }
+    .result-details strong { font-size: 1.15rem; }
+    .sample-description {
+        text-align: center;
+        font-size: 1rem;
+        font-weight: 650;
+        line-height: 1.35;
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sample-filename {
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-top: 0.45rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("License Plate Detection")
 st.caption("Select an example or upload your own image.")
 
@@ -170,8 +201,7 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
     with column:
         with st.container(border=True):
             st.markdown(
-                f"<div style='text-align:center; font-weight:600; min-height:48px; "
-                f"display:flex; align-items:center; justify-content:center;'>{description}</div>",
+                f"<div class='sample-description'>{description}</div>",
                 unsafe_allow_html=True,
             )
             if sample_path.exists():
@@ -196,7 +226,7 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
                     unsafe_allow_html=True,
                 )
                 st.markdown(
-                    f"<div style='text-align:center; font-size:0.78rem; margin-top:5px;'>"
+                    f"<div class='sample-filename'>"
                     f"{Path(sample['filename']).stem}</div>",
                     unsafe_allow_html=True,
                 )
@@ -283,12 +313,16 @@ if selected_bytes is not None:
 process_now = False
 pending_bytes = None
 pending_name = "selected-image"
-if st.button(
-    "Detect",
-    type="primary",
-    use_container_width=True,
-    disabled=selected_bytes is None,
-):
+_, detect_column, _ = st.columns([1, 1, 1])
+with detect_column:
+    process_clicked = st.button(
+        "Detect",
+        type="primary",
+        use_container_width=False,
+        disabled=selected_bytes is None,
+    )
+
+if process_clicked:
     pending_bytes = selected_bytes
     pending_name = selected_name or "selected-image"
     process_now = True
@@ -314,20 +348,37 @@ if "plate_detections" in st.session_state:
 
     st.divider()
     st.subheader("Detection results")
-    st.caption(f"Image: {st.session_state.get('plate_source_name', 'Selected image')}")
-    st.metric("Detected plates", len(detections))
+    st.markdown(
+        f"<div class='result-details'>Image: <strong>{st.session_state.get('plate_source_name', 'Selected image')}</strong></div>",
+        unsafe_allow_html=True,
+    )
+    _, metric_column, _ = st.columns([1, 2, 1])
+    with metric_column:
+        st.metric("Detected plates", len(detections))
 
     if detections:
         annotated = annotate_image(source_image, detections)
-        st.image(annotated, caption="Detected license plate regions", use_container_width=True)
+        _, result_image_column, _ = st.columns([1, 2, 1])
+        with result_image_column:
+            st.image(annotated, caption="Detected license plate regions", use_container_width=True)
 
         for index, item in enumerate(detections, start=1):
-            st.markdown(f"**Plate {index}**")
-            st.write(f"Detection confidence: **{item['confidence']:.1%}**")
+            st.markdown(
+                f"<div class='result-details'><strong>Plate {index}</strong><br>"
+                f"Detection confidence: <strong>{item['confidence']:.1%}</strong></div>",
+                unsafe_allow_html=True,
+            )
             if item["text"]:
-                st.write(f"Recognized text: **{item['text']}**")
+                st.markdown(
+                    f"<div class='result-details'>Recognized text: <strong>{item['text']}</strong></div>",
+                    unsafe_allow_html=True,
+                )
                 if item["ocr_confidence"] is not None:
-                    st.caption(f"OCR confidence (Tesseract): {item['ocr_confidence']:.1f}/100")
+                    st.markdown(
+                        f"<div class='result-details'>OCR confidence (Tesseract): "
+                        f"<strong>{item['ocr_confidence']:.1f}/100</strong></div>",
+                        unsafe_allow_html=True,
+                    )
             else:
                 st.warning("The plate was detected, but its text could not be read clearly.")
 
