@@ -35,10 +35,7 @@ def load_model():
     # The checkpoint was created on Windows and may contain pathlib.WindowsPath
     # objects. Streamlit Cloud runs Linux, where unpickling WindowsPath fails.
     # Map that serialized class to PosixPath while YOLOv5 loads the checkpoint.
-    if not hasattr(pathlib, "WindowsPath"):
-        pathlib.WindowsPath = pathlib.PosixPath
-    else:
-        pathlib.WindowsPath = pathlib.PosixPath
+    pathlib.WindowsPath = pathlib.PosixPath
 
     # CPU inference keeps the app compatible with the free hosting tier.
     model = torch.hub.load(
