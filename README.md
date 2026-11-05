@@ -101,11 +101,7 @@ cd frontend
 npm install
 ```
 
-Create `frontend/.env` from `frontend/.env.example` if you need to change the API address. For local development, the default is:
-
-```text
-VITE_API_URL=http://localhost:8000
-```
+The Vite development server proxies `/api` and `/health` requests to the backend on port 8000, so no API URL setting is required for local development. If the frontend and API are hosted on different origins, set `VITE_API_URL` in the frontend build environment to the public FastAPI URL.
 
 Then start Vite:
 
