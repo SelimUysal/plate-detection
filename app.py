@@ -315,12 +315,14 @@ pending_bytes = None
 pending_name = "selected-image"
 _, detect_column, _ = st.columns([1, 1, 1])
 with detect_column:
-    process_clicked = st.button(
-        "Detect",
-        type="primary",
-        use_container_width=False,
-        disabled=selected_bytes is None,
-    )
+    _, button_column, _ = st.columns([1, 1, 1])
+    with button_column:
+        process_clicked = st.button(
+            "Detect",
+            type="primary",
+            use_container_width=False,
+            disabled=selected_bytes is None,
+        )
 
 if process_clicked:
     pending_bytes = selected_bytes
