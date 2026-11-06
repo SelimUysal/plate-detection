@@ -88,38 +88,50 @@ st.markdown(
         border-radius: 14px !important;
         background: #ffffff !important;
     }
-    /* Keep the two main actions visually consistent and prevent label wrapping. */
+    /* Compact, bright-blue actions with explicitly white, readable labels. */
     div[data-testid="stButton"] > button,
     div[data-testid="stDownloadButton"] > button {
         box-sizing: border-box;
         width: 100%;
-        min-height: 3.15rem;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        font-size: 0.98rem;
+        min-height: 2.55rem;
+        padding: 0.55rem 0.8rem;
+        border-radius: 9px;
+        font-size: 0.88rem;
         font-weight: 700;
-        line-height: 1.25;
+        line-height: 1.2;
         white-space: normal;
-        overflow-wrap: anywhere;
-        border: 1px solid #1f4e79;
-        background: #1f4e79;
-        color: #ffffff;
+        overflow-wrap: break-word;
+        word-break: normal;
+        border: 1px solid #559bd2 !important;
+        background: #559bd2 !important;
+        color: #ffffff !important;
         transition: background 120ms ease, border-color 120ms ease,
                     transform 120ms ease, box-shadow 120ms ease;
     }
+    div[data-testid="stButton"] > button *,
+    div[data-testid="stDownloadButton"] > button * {
+        color: #ffffff !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        font-weight: 700 !important;
+    }
     div[data-testid="stButton"] > button:hover,
     div[data-testid="stDownloadButton"] > button:hover {
-        background: #173a5b;
-        border-color: #173a5b;
-        color: #ffffff;
+        background: #4389c1 !important;
+        border-color: #4389c1 !important;
+        color: #ffffff !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(23, 58, 91, 0.16);
+        box-shadow: 0 3px 10px rgba(67, 137, 193, 0.18);
     }
     div[data-testid="stButton"] > button:disabled {
-        background: #e8edf3;
-        border-color: #d5dee8;
-        color: #77869a;
+        background: #e8edf3 !important;
+        border-color: #d5dee8 !important;
+        color: #77869a !important;
         opacity: 1;
+    }
+    div[data-testid="stButton"] > button:disabled *,
+    div[data-testid="stDownloadButton"] > button:disabled * {
+        color: #77869a !important;
     }
     [data-testid="stMetric"] {
         background: #f6f8fc;
@@ -135,6 +147,12 @@ st.markdown(
             padding: 1.25rem 1rem 2rem 1rem;
         }
         h1 { font-size: 1.9rem !important; }
+        div[data-testid="stButton"] > button,
+        div[data-testid="stDownloadButton"] > button {
+            min-height: 2.45rem;
+            font-size: 0.84rem;
+            padding: 0.5rem 0.65rem;
+        }
     }
     </style>
     """,
@@ -475,4 +493,3 @@ if "plate_detections" in st.session_state:
             )
     else:
         st.warning("No license plate was found in this photo. Try a clearer image with the plate fully visible and facing the camera.")
-
