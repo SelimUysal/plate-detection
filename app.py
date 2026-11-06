@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
-import base64
 import pathlib
 import re
 
@@ -399,7 +398,7 @@ if process_now and pending_bytes is not None:
             st.session_state["plate_detections"] = detections
             st.session_state["plate_source_image"] = image
             st.session_state["plate_source_name"] = pending_name
-    except Exception as exc:
+    except Exception:
         st.error("We could not process this image. Please try another JPG, PNG or WebP photo.")
 
 if "plate_detections" in st.session_state:
