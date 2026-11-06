@@ -88,15 +88,38 @@ st.markdown(
         border-radius: 14px !important;
         background: #ffffff !important;
     }
-    .stButton > button, .stDownloadButton > button {
+    /* Keep the two main actions visually consistent and prevent label wrapping. */
+    div[data-testid="stButton"] > button,
+    div[data-testid="stDownloadButton"] > button {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 3.15rem;
+        padding: 0.75rem 1rem;
         border-radius: 10px;
-        font-weight: 650;
-        min-height: 2.7rem;
-        transition: transform 120ms ease, box-shadow 120ms ease;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        border: 1px solid #1f4e79;
+        background: #1f4e79;
+        color: #ffffff;
+        transition: background 120ms ease, border-color 120ms ease,
+                    transform 120ms ease, box-shadow 120ms ease;
     }
-    .stButton > button:hover, .stDownloadButton > button:hover {
+    div[data-testid="stButton"] > button:hover,
+    div[data-testid="stDownloadButton"] > button:hover {
+        background: #173a5b;
+        border-color: #173a5b;
+        color: #ffffff;
         transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(23, 32, 51, 0.10);
+        box-shadow: 0 4px 14px rgba(23, 58, 91, 0.16);
+    }
+    div[data-testid="stButton"] > button:disabled {
+        background: #e8edf3;
+        border-color: #d5dee8;
+        color: #77869a;
+        opacity: 1;
     }
     [data-testid="stMetric"] {
         background: #f6f8fc;
@@ -370,16 +393,14 @@ if selected_bytes is not None:
 process_now = False
 pending_bytes = None
 pending_name = "selected-image"
-_, detect_column, _ = st.columns([1, 1, 1])
+_, detect_column, _ = st.columns([1, 2, 1])
 with detect_column:
-    _, button_column, _ = st.columns([1, 1, 1])
-    with button_column:
-        process_clicked = st.button(
-            "Detect license plate",
-            type="primary",
-            use_container_width=False,
-            disabled=selected_bytes is None,
-        )
+    process_clicked = st.button(
+        "Detect License Plate",
+        type="primary",
+        use_container_width=True,
+        disabled=selected_bytes is None,
+    )
 
 if process_clicked:
     pending_bytes = selected_bytes
@@ -443,13 +464,15 @@ if "plate_detections" in st.session_state:
 
         buffer = BytesIO()
         annotated.save(buffer, format="PNG")
-        st.download_button(
-            "Download result image",
-            data=buffer.getvalue(),
-            file_name="license-plate-detection.png",
-            mime="image/png",
-            use_container_width=True,
-        )
+        _, download_column, _ = st.columns([1, 2, 1])
+        with download_column:
+            st.download_button(
+                "Download Result Image",
+                data=buffer.getvalue(),
+                file_name="license-plate-detection.png",
+                mime="image/png",
+                use_container_width=True,
+            )
     else:
         st.warning("No license plate was found in this photo. Try a clearer image with the plate fully visible and facing the camera.")
 
