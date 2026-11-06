@@ -58,13 +58,80 @@ st.markdown(
         font-weight: 500;
         margin-top: 0.45rem;
     }
+    /* Consistent, accessible light interface for first-time visitors. */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background: #ffffff !important;
+        color: #172033 !important;
+    }
+    [data-testid="stAppViewContainer"] .main {
+        background: #ffffff !important;
+    }
+    .block-container {
+        max-width: 1100px;
+        padding-top: 2.2rem;
+        padding-bottom: 3rem;
+    }
+    h1, h2, h3, p, label, [data-testid="stMarkdownContainer"] {
+        color: #172033;
+    }
+    h1 {
+        text-align: center;
+        letter-spacing: -0.035em;
+        font-weight: 750;
+    }
+    [data-testid="stCaptionContainer"] {
+        text-align: center;
+        color: #526078;
+        font-size: 1.02rem;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-color: #e4e9f1 !important;
+        border-radius: 14px !important;
+        background: #ffffff !important;
+    }
+    .stButton > button, .stDownloadButton > button {
+        border-radius: 10px;
+        font-weight: 650;
+        min-height: 2.7rem;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(23, 32, 51, 0.10);
+    }
+    [data-testid="stMetric"] {
+        background: #f6f8fc;
+        border: 1px solid #e7ecf3;
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+    }
+    [data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+    @media (max-width: 700px) {
+        .block-container {
+            padding: 1.25rem 1rem 2rem 1rem;
+        }
+        h1 { font-size: 1.9rem !important; }
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 st.title("License Plate Detection")
-st.caption("Select an example or upload your own image.")
+st.caption("Upload a vehicle photo and let the app find and read its license plate.")
+
+st.markdown(
+    """
+    <div style="max-width:760px;margin:0 auto 1.4rem auto;text-align:center;
+                color:#526078;font-size:0.98rem;line-height:1.65;">
+        Choose one of the example photos below or upload an image from your device.
+        The app will highlight detected license plates and attempt to read their text.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 @st.cache_resource(show_spinner="YOLOv5 model is loading…")
 def load_model():
@@ -180,7 +247,7 @@ def select_sample(sample_path: Path, filename: str) -> None:
     st.session_state.pop("plate_source_name", None)
 
 
-st.subheader("Example images")
+st.subheader("Try an example")
 sample_columns = st.columns(3, gap="medium")
 sample_descriptions = [
     "Detection and OCR both correct",
@@ -209,7 +276,6 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
                     thumbnail.paste(contained_image, (paste_x, paste_y))
                 thumbnail_buffer = BytesIO()
                 thumbnail.save(thumbnail_buffer, format="JPEG", quality=88)
-                encoded_image = base64.b64encode(thumbnail_buffer.getvalue()).decode("ascii")
                 # Preview images are deliberately non-clickable. Use the Try button to select one.
                 st.image(thumbnail, use_container_width=True)
                 st.markdown(
@@ -223,7 +289,7 @@ for column, sample, description in zip(sample_columns, SAMPLES, sample_descripti
                 st.error(f"Missing: {sample['filename']}")
 
 st.divider()
-st.subheader("Upload your own image")
+st.subheader("Or upload your own photo")
 st.markdown(
     """
     <style>
@@ -254,7 +320,7 @@ st.markdown(
         font-weight: 600;
     }
     </style>
-    <div class="upload-help">Choose an image from your device to get started.</div>
+    <div class="upload-help">Supported formats: JPG, JPEG, PNG and WebP. For best results, use a clear photo where the vehicle and plate are visible.</div>
     """,
     unsafe_allow_html=True,
 )
@@ -310,7 +376,7 @@ with detect_column:
     _, button_column, _ = st.columns([1, 1, 1])
     with button_column:
         process_clicked = st.button(
-            "Detect",
+            "Detect license plate",
             type="primary",
             use_container_width=False,
             disabled=selected_bytes is None,
@@ -334,17 +400,16 @@ if process_now and pending_bytes is not None:
             st.session_state["plate_source_image"] = image
             st.session_state["plate_source_name"] = pending_name
     except Exception as exc:
-        st.error("The image could not be processed.")
-        st.exception(exc)
+        st.error("We could not process this image. Please try another JPG, PNG or WebP photo.")
 
 if "plate_detections" in st.session_state:
     detections = st.session_state["plate_detections"]
     source_image = st.session_state["plate_source_image"]
 
     st.divider()
-    st.subheader("Detection results")
+    st.subheader("Your results")
     st.markdown(
-        f"<div class='result-details'>Image: <strong>{st.session_state.get('plate_source_name', 'Selected image')}</strong></div>",
+        f"<div class='result-details'>Photo: <strong>{st.session_state.get('plate_source_name', 'Selected image')}</strong></div>",
         unsafe_allow_html=True,
     )
     _, metric_column, _ = st.columns([1, 2, 1])
@@ -370,12 +435,12 @@ if "plate_detections" in st.session_state:
                 )
                 if item["ocr_confidence"] is not None:
                     st.markdown(
-                        f"<div class='result-details'>OCR confidence (Tesseract): "
+                        f"<div class='result-details'>Text-reading confidence: "
                         f"<strong>{item['ocr_confidence']:.1f}/100</strong></div>",
                         unsafe_allow_html=True,
                     )
             else:
-                st.warning("The plate was detected, but its text could not be read clearly.")
+                st.warning("A license plate was found, but we could not read its text clearly. Try a closer, sharper photo.")
 
         buffer = BytesIO()
         annotated.save(buffer, format="PNG")
@@ -387,5 +452,5 @@ if "plate_detections" in st.session_state:
             use_container_width=True,
         )
     else:
-        st.warning("No license plate was detected. Try a sharper image with a larger, clearly visible plate.")
+        st.warning("No license plate was found in this photo. Try a clearer image with the plate fully visible and facing the camera.")
 
