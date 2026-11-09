@@ -1,7 +1,9 @@
 # License Plate Detection & Recognition
 
 A small computer-vision web application that detects license-plate regions with a custom-trained YOLOv5 model and attempts to read each detected plate with Tesseract OCR.
+
 **Live website:**  https://plate-detection-selim-uysal.streamlit.app/
+
 ## Features
 
 - Upload a vehicle image (JPG, JPEG, PNG, or WebP).
